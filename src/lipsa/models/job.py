@@ -51,6 +51,11 @@ class SearchJob(BaseModel):
     disclaimer_version: str
     consent_ack_token: str | None = None  # ties to audit_events
 
+    # Consent snapshot (for recurring jobs - P5 legal requirement)
+    consent_disclaimer_version: str | None = None
+    consent_purpose: str | None = None
+    consent_timestamp: datetime | None = None
+
 
 class SearchJobCreate(BaseModel):
     name: str
@@ -60,6 +65,11 @@ class SearchJobCreate(BaseModel):
     purpose: str | None = None
     provider_preference: str | None = None
     schedule_cron: str | None = None
+
+    # Consent snapshot will be populated by the system at creation time for scheduled jobs
+    consent_disclaimer_version: str | None = None
+    consent_purpose: str | None = None
+    consent_timestamp: datetime | None = None
 
 
 class JobRun(BaseModel):

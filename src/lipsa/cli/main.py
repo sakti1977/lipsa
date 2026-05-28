@@ -31,10 +31,14 @@ from lipsa.models.job import DataSourceType
 from lipsa.models.post import Filters
 from lipsa.scrapers import get_backend
 from lipsa.storage import (
+    delete_search_job,
     get_audit_events_for_job,
     get_runs_for_job,
     get_search_job,
     list_recent_jobs,
+    pause_job,
+    resume_job,
+    update_search_job,
 )
 from lipsa.storage.db import get_db_info, get_session, run_migrations  # for db + jobs commands
 from lipsa.storage.repositories import (
@@ -580,6 +584,215 @@ def jobs_posts(
         session.close()
 
 
+@jobs_app.command("create")
+def jobs_create(
+    name: str = typer.Argument(..., help="Human-readable name for the job"),
+    query: str = typer.Option(..., "--query", "-q", help="Search query or import description"),
+    source: str = typer.Option("public_scrape", "--source", help="Data source type"),
+    schedule: str | None = typer.Option(None, "--schedule", help="Cron expression for recurring execution (e.g. '0 9 * * MON')"),
+    purpose: str = typer.Option(..., "--purpose", "-p", help="Purpose / lawful basis (required)"),
+) -> None:
+    """Create a new (optionally recurring) job.
+
+    For scheduled jobs, this will force a fresh consent acknowledgment
+    and capture a versioned snapshot (core P5 legal requirement).
+    """
+    try:
+        data_source = DataSourceType(source)
+    except ValueError:
+        console.print(f"[red]Invalid source. Valid: {[e.value for e in DataSourceType]}[/red]")
+        raise typer.Exit(1) from None
+
+    # For recurring jobs, enforce consent snapshot at creation time
+    effective_purpose = purpose.strip()
+    consent_disclaimer_version = None
+    consent_purpose = None
+    consent_timestamp = None
+
+    if schedule:
+        # Force explicit consent acknowledgment for scheduled jobs
+        if not require_acknowledgment(interactive=True, context=f"jobs:create:scheduled:{name}"):
+            console.print("[red]Consent acknowledgment is required to create a recurring job.[/red]")
+            raise typer.Exit(1)
+
+        consent_disclaimer_version = DISCLAIMER_VERSION
+        consent_purpose = effective_purpose
+        consent_timestamp = datetime.utcnow()
+
+    session = get_session()
+    try:
+        job = create_search_job(
+            session,
+            name=name,
+            query=query,
+            filters_json={},
+            disclaimer_version=DISCLAIMER_VERSION,
+            data_source_type=data_source.value,
+            purpose=effective_purpose,
+            schedule_cron=schedule,
+            consent_disclaimer_version=consent_disclaimer_version,
+            consent_purpose=consent_purpose,
+            consent_timestamp=consent_timestamp,
+        )
+        session.commit()
+
+        console.print(f"[bold green]✓ Job created:[/bold green] {job.id}")
+        console.print(f"  Name: {name}")
+        console.print(f"  Source: {data_source.value}")
+        if schedule:
+            console.print(f"  Schedule: {schedule}")
+            console.print(f"  Consent snapshot captured at version {DISCLAIMER_VERSION}")
+            console.print("[yellow]Note: Start the scheduler with 'lipsa scheduler start' to run recurring jobs.[/yellow]")
+
+    finally:
+        session.close()
+
+
+@jobs_app.command("update")
+def jobs_update(
+    job_id: str = typer.Argument(..., help="ID of the job to update"),
+    name: str | None = typer.Option(None, "--name", help="New name"),
+    query: str | None = typer.Option(None, "--query", "-q", help="New query"),
+    schedule: str | None = typer.Option(None, "--schedule", help="New cron schedule (use 'none' to remove)"),
+    purpose: str | None = typer.Option(None, "--purpose", "-p", help="New purpose (will require re-ack if changed)"),
+) -> None:
+    """Update an existing job. Changing schedule or purpose on a recurring job requires re-acknowledgment."""
+    session = get_session()
+    try:
+        job = get_search_job(session, job_id)
+        if not job:
+            console.print(f"[red]Job {job_id} not found.[/red]")
+            return
+
+        is_scheduled = bool(job.schedule_cron) or (schedule and schedule != "none")
+        new_schedule = schedule
+        if schedule == "none":
+            new_schedule = None
+
+        new_purpose = purpose.strip() if purpose else job.purpose
+
+        consent_disclaimer_version = None
+        consent_purpose = None
+        consent_timestamp = None
+
+        # If this is/was a scheduled job and critical fields are changing, force re-ack
+        schedule_changing = (new_schedule is not None) and (new_schedule != job.schedule_cron)
+        purpose_changing = new_purpose and (new_purpose != job.purpose)
+
+        if is_scheduled and (schedule_changing or purpose_changing):
+            console.print("[yellow]You are modifying a recurring job. Re-acknowledgment of consent is required.[/yellow]")
+            if not require_acknowledgment(interactive=True, context=f"jobs:update:{job_id}"):
+                console.print("[red]Consent re-acknowledgment required. Update cancelled.[/red]")
+                return
+
+            consent_disclaimer_version = DISCLAIMER_VERSION
+            consent_purpose = new_purpose
+            consent_timestamp = datetime.utcnow()
+
+        updated = update_search_job(
+            session,
+            job_id,
+            name=name,
+            query=query,
+            schedule_cron=new_schedule,
+            purpose=new_purpose,
+            consent_disclaimer_version=consent_disclaimer_version,
+            consent_purpose=consent_purpose,
+            consent_timestamp=consent_timestamp,
+        )
+        session.commit()
+
+        if updated:
+            console.print(f"[green]✓ Job {job_id} updated successfully.[/green]")
+            if schedule:
+                console.print("[yellow]Note: Restart the scheduler (`lipsa scheduler start`) for schedule changes to apply.[/yellow]")
+        else:
+            console.print("[red]Update failed.[/red]")
+    finally:
+        session.close()
+
+
+@jobs_app.command("delete")
+def jobs_delete(
+    job_id: str = typer.Argument(..., help="ID of the job to delete"),
+    force: bool = typer.Option(False, "--force", help="Skip confirmation"),
+) -> None:
+    """Delete a job and all its associated runs and data."""
+    if not force:
+        confirm = typer.confirm(f"Are you sure you want to delete job {job_id}? This cannot be undone.", default=False)
+        if not confirm:
+            console.print("Aborted.")
+            return
+
+    session = get_session()
+    try:
+        success = delete_search_job(session, job_id)
+        session.commit()
+
+        if success:
+            console.print(f"[green]✓ Job {job_id} and its runs have been deleted.[/green]")
+        else:
+            console.print(f"[red]Job {job_id} not found.[/red]")
+    finally:
+        session.close()
+
+
+@jobs_app.command("pause")
+def jobs_pause(job_id: str = typer.Argument(..., help="ID of the scheduled job to pause")) -> None:
+    """Pause a recurring job (removes it from the active schedule)."""
+    from lipsa.scheduler import get_scheduler
+
+    session = get_session()
+    try:
+        success = pause_job(session, job_id)
+        session.commit()
+
+        if success:
+            # Also remove from running scheduler if active
+            scheduler = get_scheduler()
+            if scheduler and scheduler.running:
+                try:
+                    scheduler.remove_job(job_id)
+                except Exception:
+                    pass  # Job might not be loaded yet
+
+            console.print(f"[yellow]✓ Job {job_id} paused.[/yellow]")
+            console.print("It will no longer run until you resume it.")
+        else:
+            console.print(f"[red]Could not pause job {job_id} (not found or not scheduled).[/red]")
+    finally:
+        session.close()
+
+
+@jobs_app.command("resume")
+def jobs_resume(
+    job_id: str = typer.Argument(..., help="ID of the job to resume"),
+    schedule: str = typer.Option(..., "--schedule", help="Cron expression to use when resuming"),
+) -> None:
+    """Resume a paused job with a (possibly new) schedule."""
+    from lipsa.scheduler import get_scheduler, schedule_job
+
+    session = get_session()
+    try:
+        success = resume_job(session, job_id, new_cron=schedule)
+        session.commit()
+
+        if success:
+            # Re-add to scheduler if it's running
+            scheduler = get_scheduler()
+            if scheduler and scheduler.running:
+                # Note: Full job execution logic will be wired in later P5 work
+                from lipsa.scheduler.aps import _run_scheduled_job
+                schedule_job(job_id, schedule, _run_scheduled_job)
+
+            console.print(f"[green]✓ Job {job_id} resumed with schedule: {schedule}[/green]")
+            console.print("The job will be picked up the next time the scheduler evaluates it.")
+        else:
+            console.print(f"[red]Could not resume job {job_id}.[/red]")
+    finally:
+        session.close()
+
+
 @jobs_app.command("export")
 def jobs_export(
     job_id: str,
@@ -880,6 +1093,40 @@ def _run_file_import(
 
 
 app.add_typer(import_app, name="import")
+
+
+# =============================================================================
+# Scheduler commands (P5 - Basic Scheduling)
+# =============================================================================
+
+scheduler_app = typer.Typer(help="Control the background scheduler for recurring jobs")
+
+
+@scheduler_app.command("start")
+def scheduler_start(foreground: bool = typer.Option(True, "--foreground", help="Run scheduler in foreground (default)")) -> None:
+    """Start the APScheduler background scheduler and load all eligible recurring jobs."""
+    from lipsa.scheduler import start_scheduler
+
+    console.print("[bold]Starting LIPSA scheduler...[/bold]")
+    console.print("Loading scheduled jobs with valid consent snapshots...")
+
+    try:
+        start_scheduler()
+        console.print("[green]Scheduler started successfully.[/green]")
+        console.print("[dim]Press Ctrl+C to stop.[/dim]")
+
+        if foreground:
+            # Keep the process alive
+            import time
+            while True:
+                time.sleep(1)
+    except KeyboardInterrupt:
+        from lipsa.scheduler import shutdown_scheduler
+        shutdown_scheduler()
+        console.print("\n[yellow]Scheduler stopped.[/yellow]")
+
+
+app.add_typer(scheduler_app, name="scheduler")
 
 
 # =============================================================================

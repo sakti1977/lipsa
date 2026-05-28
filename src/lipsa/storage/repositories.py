@@ -45,6 +45,8 @@ def create_search_job(
     schedule_cron: str | None = None,
     consent_ack_token: str | None = None,
 ) -> SearchJobModel:
+    now = datetime.utcnow()
+
     job = SearchJobModel(
         id=generate_id(),
         name=name,
@@ -54,10 +56,18 @@ def create_search_job(
         purpose=purpose,
         provider_preference=provider_preference,
         schedule_cron=schedule_cron,
-        created_at=datetime.utcnow(),
+        created_at=now,
         disclaimer_version=disclaimer_version,
         consent_ack_token=consent_ack_token,
     )
+
+    # For scheduled/recurring jobs, capture a consent snapshot at creation time.
+    # This is a core legal requirement (P5).
+    if schedule_cron:
+        job.consent_disclaimer_version = disclaimer_version
+        job.consent_purpose = purpose
+        job.consent_timestamp = now
+
     session.add(job)
     session.flush()
     return job
@@ -65,6 +75,96 @@ def create_search_job(
 
 def get_search_job(session: Session, job_id: str) -> SearchJobModel | None:
     return session.get(SearchJobModel, job_id)
+
+
+def update_search_job(
+    session: Session,
+    job_id: str,
+    name: str | None = None,
+    query: str | None = None,
+    schedule_cron: str | None = None,
+    purpose: str | None = None,
+    provider_preference: str | None = None,
+    consent_disclaimer_version: str | None = None,
+    consent_purpose: str | None = None,
+    consent_timestamp: datetime | None = None,
+) -> SearchJobModel | None:
+    """Update a job. Returns the updated job or None if not found.
+
+    When schedule_cron or purpose is changed on a recurring job,
+    the caller should also pass fresh consent snapshot values.
+    """
+    job = session.get(SearchJobModel, job_id)
+    if not job:
+        return None
+
+    if name is not None:
+        job.name = name
+    if query is not None:
+        job.query = query
+    if schedule_cron is not None:
+        job.schedule_cron = schedule_cron
+    if purpose is not None:
+        job.purpose = purpose
+    if provider_preference is not None:
+        job.provider_preference = provider_preference
+
+    # Update consent snapshot if provided (happens after re-acknowledgment)
+    if consent_disclaimer_version is not None:
+        job.consent_disclaimer_version = consent_disclaimer_version
+    if consent_purpose is not None:
+        job.consent_purpose = consent_purpose
+    if consent_timestamp is not None:
+        job.consent_timestamp = consent_timestamp
+
+    session.flush()
+    return job
+
+
+def delete_search_job(session: Session, job_id: str) -> bool:
+    """Delete a job and its runs. Returns True if deleted."""
+    job = session.get(SearchJobModel, job_id)
+    if not job:
+        return False
+
+    # Delete associated runs first
+    runs = session.execute(select(JobRunModel).where(JobRunModel.job_id == job_id)).scalars().all()
+    for run in runs:
+        session.delete(run)
+
+    session.delete(job)
+    session.flush()
+    return True
+
+
+def pause_job(session: Session, job_id: str) -> bool:
+    """Pause a scheduled job (sets schedule_cron to None temporarily)."""
+    job = session.get(SearchJobModel, job_id)
+    if not job or not job.schedule_cron:
+        return False
+
+    # Store original cron in raw_metadata or a new field. For simplicity, we'll just remove it for now.
+    # Better approach: add an `is_paused` field later.
+    job.schedule_cron = None  # Simple pause for now
+    session.flush()
+    return True
+
+
+def resume_job(session: Session, job_id: str, new_cron: str | None = None) -> bool:
+    """Resume a paused job."""
+    job = session.get(SearchJobModel, job_id)
+    if not job:
+        return False
+
+    # In a real implementation we'd store the original cron.
+    # For this step, user must provide the cron again when resuming.
+    if new_cron:
+        job.schedule_cron = new_cron
+    else:
+        return False  # Require cron for now
+
+    session.flush()
+    return True
 
 
 def list_recent_jobs(session: Session, limit: int = 20) -> list[SearchJobModel]:

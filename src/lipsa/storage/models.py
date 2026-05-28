@@ -61,9 +61,15 @@ class SearchJobModel(Base):
     disclaimer_version: Mapped[str] = mapped_column(String, nullable=False)
     consent_ack_token: Mapped[str | None] = mapped_column(String)
 
+    # Consent snapshot for recurring jobs (P5 - legal requirement)
+    # This stores the exact consent state captured at creation/edit time.
+    consent_disclaimer_version: Mapped[str | None] = mapped_column(String)
+    consent_purpose: Mapped[str | None] = mapped_column(Text)
+    consent_timestamp: Mapped[datetime | None] = mapped_column(DateTime)
+
     # Hybrid + Legal strengthening (Options 2 + 3)
     data_source_type: Mapped[str] = mapped_column(String, default="public_scrape", nullable=False)
-    purpose: Mapped[str | None] = mapped_column(Text)  # User-declared purpose / lawful basis
+    purpose: Mapped[str | None] = mapped_column(Text)  # Current user-declared purpose / lawful basis
 
     # Relationships
     runs: Mapped[list[JobRunModel]] = relationship(
