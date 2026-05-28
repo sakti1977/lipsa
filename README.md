@@ -3,6 +3,7 @@
 > **Local-first tool for searching and collecting LinkedIn posts via commercial providers or lower-risk imports, with strong legal, ethical, and audit guardrails.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![CI](https://github.com/sakti1977/lipsa/actions/workflows/ci.yml/badge.svg)
 ![Status](https://img.shields.io/badge/status-alpha-orange)
 
 ---
