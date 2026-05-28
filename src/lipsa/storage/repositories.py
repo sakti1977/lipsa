@@ -168,11 +168,7 @@ def resume_job(session: Session, job_id: str, new_cron: str | None = None) -> bo
 
 
 def list_recent_jobs(session: Session, limit: int = 20) -> list[SearchJobModel]:
-    stmt = (
-        select(SearchJobModel)
-        .order_by(SearchJobModel.created_at.desc())
-        .limit(limit)
-    )
+    stmt = select(SearchJobModel).order_by(SearchJobModel.created_at.desc()).limit(limit)
     return list(session.execute(stmt).scalars())
 
 
@@ -324,14 +320,14 @@ def record_audit_event(
 def get_recent_audit_events(session: Session, limit: int = 100) -> list[AuditEventModel]:
     return list(
         session.execute(
-            select(AuditEventModel)
-            .order_by(AuditEventModel.timestamp.desc())
-            .limit(limit)
+            select(AuditEventModel).order_by(AuditEventModel.timestamp.desc()).limit(limit)
         ).scalars()
     )
 
 
-def get_audit_events_for_job(session: Session, job_id: str, limit: int = 500) -> list[AuditEventModel]:
+def get_audit_events_for_job(
+    session: Session, job_id: str, limit: int = 500
+) -> list[AuditEventModel]:
     """Get audit events related to a specific job (for compliance exports)."""
     stmt = (
         select(AuditEventModel)

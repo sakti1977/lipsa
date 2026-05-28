@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 class MediaItem(BaseModel):
     """Represents one media attachment (image, video, document, etc.)."""
+
     url: HttpUrl
     type: str = "image"  # image | video | pdf | article | ...
     width: int | None = None
@@ -27,6 +28,7 @@ class MediaItem(BaseModel):
 
 class AuthorSnapshot(BaseModel):
     """Denormalized author information captured at collection time."""
+
     name: str
     headline: str | None = None
     profile_url: HttpUrl
@@ -40,6 +42,7 @@ class Post(BaseModel):
     This is the primary data contract. All scrapers must normalize into this.
     The DB layer stores most fields denormalized + raw_provider_data for fidelity.
     """
+
     model_config = ConfigDict(from_attributes=True, extra="ignore")
 
     post_urn: str = Field(..., description="LinkedIn URN, e.g. urn:li:activity:1234567890")
@@ -69,6 +72,7 @@ class Post(BaseModel):
 
 class PostCreate(Post):
     """Used when inserting a new post (no DB id yet)."""
+
     pass
 
 
@@ -76,6 +80,7 @@ class Filters(BaseModel):
     """
     Search filters that can be applied client-side or (partially) pushed to providers.
     """
+
     model_config = ConfigDict(extra="forbid")
 
     date_from: datetime | None = None

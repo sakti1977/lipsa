@@ -45,14 +45,17 @@ class ScraperBackend(Protocol):
 
 class ScraperError(Exception):
     """Base exception for all scraper-related failures."""
+
     pass
 
 
 class AuthenticationError(ScraperError):
     """Raised when API token is missing or invalid."""
+
     pass
 
 
 class ProviderRateLimitError(ScraperError):
     """Raised when the provider rate-limits or quotas are exceeded."""
+
     pass

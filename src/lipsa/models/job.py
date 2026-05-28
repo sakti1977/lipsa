@@ -17,7 +17,8 @@ from lipsa.models.post import Filters
 
 class DataSourceType(StrEnum):
     """Type of data source for a collection job. Used for legal risk tiering."""
-    PUBLIC_SCRAPE = "public_scrape"          # Via Apify/Bright Data etc. (highest risk)
+
+    PUBLIC_SCRAPE = "public_scrape"  # Via Apify/Bright Data etc. (highest risk)
     SALES_NAVIGATOR_EXPORT = "sales_navigator_export"
     LINKEDIN_DATA_EXPORT = "linkedin_data_export"
     COMPANY_OWNED_API = "company_owned_api"
@@ -36,6 +37,7 @@ class JobStatus(StrEnum):
 
 class SearchJob(BaseModel):
     """A persistent search definition (one-off or recurring)."""
+
     model_config = ConfigDict(from_attributes=True, extra="ignore")
 
     id: str
@@ -43,7 +45,7 @@ class SearchJob(BaseModel):
     query: str
     filters: Filters
     data_source_type: DataSourceType = DataSourceType.PUBLIC_SCRAPE
-    purpose: str | None = None          # User-declared purpose / lawful basis
+    purpose: str | None = None  # User-declared purpose / lawful basis
     provider_preference: str | None = None  # "apify", "brightdata", etc.
     schedule_cron: str | None = None  # e.g. "0 9 * * MON"
     last_run_at: datetime | None = None
@@ -74,6 +76,7 @@ class SearchJobCreate(BaseModel):
 
 class JobRun(BaseModel):
     """One execution of a SearchJob."""
+
     model_config = ConfigDict(from_attributes=True, extra="ignore")
 
     id: str

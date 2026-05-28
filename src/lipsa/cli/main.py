@@ -127,17 +127,26 @@ def legal_command(
         console.print(
             "[yellow]You are about to acknowledge the legal and ethical risks of using LIPSA.[/yellow]"
         )
-        console.print("Please read the full text with [cyan]lipsa legal show[/cyan] first if you have not.\n")
+        console.print(
+            "Please read the full text with [cyan]lipsa legal show[/cyan] first if you have not.\n"
+        )
 
-        if not Confirm.ask("Do you understand that using this tool likely violates LinkedIn's ToS?", default=False):
+        if not Confirm.ask(
+            "Do you understand that using this tool likely violates LinkedIn's ToS?", default=False
+        ):
             console.print("[red]Acknowledgment not recorded. Exiting.[/red]")
             raise typer.Exit(code=1)
 
-        if not Confirm.ask("Do you accept full responsibility for any consequences (account bans, legal action, regulatory fines, etc.)?", default=False):
+        if not Confirm.ask(
+            "Do you accept full responsibility for any consequences (account bans, legal action, regulatory fines, etc.)?",
+            default=False,
+        ):
             console.print("[red]Acknowledgment not recorded. Exiting.[/red]")
             raise typer.Exit(code=1)
 
-        if not Confirm.ask("Do you confirm you have read and understood the current disclaimer?", default=False):
+        if not Confirm.ask(
+            "Do you confirm you have read and understood the current disclaimer?", default=False
+        ):
             console.print("[red]Acknowledgment not recorded. Exiting.[/red]")
             raise typer.Exit(code=1)
 
@@ -171,7 +180,9 @@ def search_command(
     query: str = typer.Argument(..., help="Keyword or hashtag (e.g. '#ai' or 'climate tech')"),
     max_results: int = typer.Option(200, "--max-results", "-n", min=1, max=5000),
     provider: str = typer.Option("apify", "--provider", "-p", help="Backend to use"),
-    min_reactions: int | None = typer.Option(None, "--min-reactions", help="Only keep posts with at least this many reactions"),
+    min_reactions: int | None = typer.Option(
+        None, "--min-reactions", help="Only keep posts with at least this many reactions"
+    ),
     source: str = typer.Option(
         "public_scrape",
         "--source",
@@ -213,13 +224,19 @@ def search_command(
     try:
         data_source = DataSourceType(source)
     except ValueError:
-        console.print(f"[red]Invalid --source '{source}'. Valid options: {[e.value for e in DataSourceType]}[/red]")
+        console.print(
+            f"[red]Invalid --source '{source}'. Valid options: {[e.value for e in DataSourceType]}[/red]"
+        )
         raise typer.Exit(code=1) from None
 
     # === 3. Purpose / Lawful Basis capture (Option 3 - Strengthened Guardrails) ===
     if not purpose:
-        console.print("\n[yellow]For better legal defensibility, please provide a short description of your purpose.[/yellow]")
-        console.print("Example: 'Internal competitive intelligence for my company' or 'Academic research on AI discourse'")
+        console.print(
+            "\n[yellow]For better legal defensibility, please provide a short description of your purpose.[/yellow]"
+        )
+        console.print(
+            "Example: 'Internal competitive intelligence for my company' or 'Academic research on AI discourse'"
+        )
         purpose = typer.prompt("Purpose / Lawful basis for this collection", default="")
 
         if not purpose or len(purpose.strip()) < 10:
@@ -250,7 +267,9 @@ def search_command(
 
         console.print(f"Job created: [dim]{job.id}[/dim] | Run: [dim]{run.id}[/dim]")
         console.print(f"Data source: [cyan]{data_source.value}[/cyan]")
-        console.print(f"Purpose recorded: [dim]{purpose[:80]}{'...' if len(purpose) > 80 else ''}[/dim]")
+        console.print(
+            f"Purpose recorded: [dim]{purpose[:80]}{'...' if len(purpose) > 80 else ''}[/dim]"
+        )
 
         # === 6. Execute scraper (only for public_scrape for now) ===
         if data_source == DataSourceType.PUBLIC_SCRAPE:
@@ -308,7 +327,9 @@ def search_command(
                         export,
                         job_metadata=job_meta,
                     )
-                    console.print(f"[green]Exported {result.record_count} records → {result.output_path}[/green]")
+                    console.print(
+                        f"[green]Exported {result.record_count} records → {result.output_path}[/green]"
+                    )
                 except Exception as ex:
                     console.print(f"[yellow]Warning: Export failed: {ex}[/yellow]")
         else:
@@ -402,7 +423,9 @@ jobs_app = typer.Typer(help="Manage and inspect collection jobs (purpose, data s
 
 
 @jobs_app.command("list")
-def jobs_list(limit: int = typer.Option(20, "--limit", "-n", help="Number of recent jobs to show")) -> None:
+def jobs_list(
+    limit: int = typer.Option(20, "--limit", "-n", help="Number of recent jobs to show"),
+) -> None:
     """List recent jobs in a clean table, highlighting purpose and data source."""
     session = get_session()
     try:
@@ -460,6 +483,7 @@ def jobs_show(job_id: str) -> None:
         from sqlalchemy import func, select
 
         from lipsa.storage.models import PostModel
+
         real_post_count = session.execute(
             select(func.count(PostModel.id)).where(PostModel.job_id == job.id)
         ).scalar()
@@ -468,14 +492,16 @@ def jobs_show(job_id: str) -> None:
         details = f"""[bold]ID:[/bold] {job.id}
 [bold]Name:[/bold] {job.name}
 [bold]Query:[/bold] {job.query}
-[bold]Data Source:[/bold] [magenta]{job.data_source_type or 'public_scrape'}[/magenta]
-[bold]Purpose / Lawful Basis:[/bold] {job.purpose or '[dim](none recorded)[/dim]'}
-[bold]Provider:[/bold] {job.provider_preference or 'default'}
+[bold]Data Source:[/bold] [magenta]{job.data_source_type or "public_scrape"}[/magenta]
+[bold]Purpose / Lawful Basis:[/bold] {job.purpose or "[dim](none recorded)[/dim]"}
+[bold]Provider:[/bold] {job.provider_preference or "default"}
 [bold]Created:[/bold] {job.created_at}
-[bold]Last Run:[/bold] {job.last_run_at or 'never'}
+[bold]Last Run:[/bold] {job.last_run_at or "never"}
 [bold]Posts in Database:[/bold] {real_post_count}"""
 
-        console.print(Panel(details, title="[bold cyan]Job Details[/bold cyan]", border_style="blue"))
+        console.print(
+            Panel(details, title="[bold cyan]Job Details[/bold cyan]", border_style="blue")
+        )
 
         # Runs table
         if runs:
@@ -510,9 +536,13 @@ def jobs_show(job_id: str) -> None:
         else:
             console.print("[dim]No runs recorded for this job.[/dim]")
 
-        console.print("\n[dim]Tip: 'lipsa jobs export' creates a compliance package for this job.[/dim]")
+        console.print(
+            "\n[dim]Tip: 'lipsa jobs export' creates a compliance package for this job.[/dim]"
+        )
         if real_post_count > 0:
-            console.print("[dim]Tip: Use 'lipsa jobs posts <job-id>' to view actual stored records.[/dim]")
+            console.print(
+                "[dim]Tip: Use 'lipsa jobs posts <job-id>' to view actual stored records.[/dim]"
+            )
 
     finally:
         session.close()
@@ -552,11 +582,14 @@ def jobs_posts(
 
         if format == "json":
             import json
+
             data = [
                 {
                     "post_urn": p.post_urn,
                     "url": p.url,
-                    "text": (p.text or "")[:200] + "..." if p.text and len(p.text) > 200 else p.text,
+                    "text": (p.text or "")[:200] + "..."
+                    if p.text and len(p.text) > 200
+                    else p.text,
                     "author_name": p.author_name,
                     "reactions_count": p.reactions_count,
                 }
@@ -589,7 +622,9 @@ def jobs_create(
     name: str = typer.Argument(..., help="Human-readable name for the job"),
     query: str = typer.Option(..., "--query", "-q", help="Search query or import description"),
     source: str = typer.Option("public_scrape", "--source", help="Data source type"),
-    schedule: str | None = typer.Option(None, "--schedule", help="Cron expression for recurring execution (e.g. '0 9 * * MON')"),
+    schedule: str | None = typer.Option(
+        None, "--schedule", help="Cron expression for recurring execution (e.g. '0 9 * * MON')"
+    ),
     purpose: str = typer.Option(..., "--purpose", "-p", help="Purpose / lawful basis (required)"),
 ) -> None:
     """Create a new (optionally recurring) job.
@@ -612,7 +647,9 @@ def jobs_create(
     if schedule:
         # Force explicit consent acknowledgment for scheduled jobs
         if not require_acknowledgment(interactive=True, context=f"jobs:create:scheduled:{name}"):
-            console.print("[red]Consent acknowledgment is required to create a recurring job.[/red]")
+            console.print(
+                "[red]Consent acknowledgment is required to create a recurring job.[/red]"
+            )
             raise typer.Exit(1)
 
         consent_disclaimer_version = DISCLAIMER_VERSION
@@ -642,7 +679,9 @@ def jobs_create(
         if schedule:
             console.print(f"  Schedule: {schedule}")
             console.print(f"  Consent snapshot captured at version {DISCLAIMER_VERSION}")
-            console.print("[yellow]Note: Start the scheduler with 'lipsa scheduler start' to run recurring jobs.[/yellow]")
+            console.print(
+                "[yellow]Note: Start the scheduler with 'lipsa scheduler start' to run recurring jobs.[/yellow]"
+            )
 
     finally:
         session.close()
@@ -653,8 +692,12 @@ def jobs_update(
     job_id: str = typer.Argument(..., help="ID of the job to update"),
     name: str | None = typer.Option(None, "--name", help="New name"),
     query: str | None = typer.Option(None, "--query", "-q", help="New query"),
-    schedule: str | None = typer.Option(None, "--schedule", help="New cron schedule (use 'none' to remove)"),
-    purpose: str | None = typer.Option(None, "--purpose", "-p", help="New purpose (will require re-ack if changed)"),
+    schedule: str | None = typer.Option(
+        None, "--schedule", help="New cron schedule (use 'none' to remove)"
+    ),
+    purpose: str | None = typer.Option(
+        None, "--purpose", "-p", help="New purpose (will require re-ack if changed)"
+    ),
 ) -> None:
     """Update an existing job. Changing schedule or purpose on a recurring job requires re-acknowledgment."""
     session = get_session()
@@ -680,7 +723,9 @@ def jobs_update(
         purpose_changing = new_purpose and (new_purpose != job.purpose)
 
         if is_scheduled and (schedule_changing or purpose_changing):
-            console.print("[yellow]You are modifying a recurring job. Re-acknowledgment of consent is required.[/yellow]")
+            console.print(
+                "[yellow]You are modifying a recurring job. Re-acknowledgment of consent is required.[/yellow]"
+            )
             if not require_acknowledgment(interactive=True, context=f"jobs:update:{job_id}"):
                 console.print("[red]Consent re-acknowledgment required. Update cancelled.[/red]")
                 return
@@ -705,7 +750,9 @@ def jobs_update(
         if updated:
             console.print(f"[green]✓ Job {job_id} updated successfully.[/green]")
             if schedule:
-                console.print("[yellow]Note: Restart the scheduler (`lipsa scheduler start`) for schedule changes to apply.[/yellow]")
+                console.print(
+                    "[yellow]Note: Restart the scheduler (`lipsa scheduler start`) for schedule changes to apply.[/yellow]"
+                )
         else:
             console.print("[red]Update failed.[/red]")
     finally:
@@ -719,7 +766,9 @@ def jobs_delete(
 ) -> None:
     """Delete a job and all its associated runs and data."""
     if not force:
-        confirm = typer.confirm(f"Are you sure you want to delete job {job_id}? This cannot be undone.", default=False)
+        confirm = typer.confirm(
+            f"Are you sure you want to delete job {job_id}? This cannot be undone.", default=False
+        )
         if not confirm:
             console.print("Aborted.")
             return
@@ -783,6 +832,7 @@ def jobs_resume(
             if scheduler and scheduler.running:
                 # Note: Full job execution logic will be wired in later P5 work
                 from lipsa.scheduler.aps import _run_scheduled_job
+
                 schedule_job(job_id, schedule, _run_scheduled_job)
 
             console.print(f"[green]✓ Job {job_id} resumed with schedule: {schedule}[/green]")
@@ -916,8 +966,12 @@ def jobs_export(
                 "purpose": job.purpose,
             }
 
-            result = export_posts(posts, output or f"job-{job.id}-data", format=data_format, job_metadata=job_meta)
-            console.print(f"[bold green][OK] Data exported ({result.record_count} records) → {result.output_path}[/bold green]")
+            result = export_posts(
+                posts, output or f"job-{job.id}-data", format=data_format, job_metadata=job_meta
+            )
+            console.print(
+                f"[bold green][OK] Data exported ({result.record_count} records) → {result.output_path}[/bold green]"
+            )
             return
 
         # Default: compliance package
@@ -929,7 +983,9 @@ def jobs_export(
         with output_path.open("w", encoding="utf-8") as f:
             json.dump(package, f, indent=2, ensure_ascii=False, default=str)
 
-        console.print(f"[bold green][OK] Compliance package exported to:[/bold green] {output_path}")
+        console.print(
+            f"[bold green][OK] Compliance package exported to:[/bold green] {output_path}"
+        )
         console.print(f"Contains {len(runs)} runs and {len(audit_events)} audit events.")
 
     finally:
@@ -951,7 +1007,9 @@ import_app = typer.Typer(
 @import_app.command("sales-nav")
 def import_sales_nav(
     file: str = typer.Argument(..., help="Path to Sales Navigator CSV export"),
-    purpose: str = typer.Option(..., "--purpose", "-p", help="Purpose / lawful basis for this import (required)"),
+    purpose: str = typer.Option(
+        ..., "--purpose", "-p", help="Purpose / lawful basis for this import (required)"
+    ),
     name: str | None = typer.Option(None, "--name", help="Custom name for this import job"),
     export: str | None = typer.Option(
         None,
@@ -1015,7 +1073,9 @@ def _run_file_import(
             progress.update(task, description="Import parsing complete")
 
         if dry_run:
-            console.print("[yellow]--dry-run enabled[/yellow] — nothing will be written to the database.")
+            console.print(
+                "[yellow]--dry-run enabled[/yellow] — nothing will be written to the database."
+            )
             console.print(f"Would import: {len(result.items)} records")
             console.print(f"Source: {source_type}")
             console.print(f"Purpose: {purpose}")
@@ -1039,9 +1099,7 @@ def _run_file_import(
 
         run = create_job_run(session, job_id=job.id, provider_used="import")
 
-        inserted, skipped = bulk_upsert_posts(
-            session, result.items, job_id=job.id, run_id=run.id
-        )
+        inserted, skipped = bulk_upsert_posts(session, result.items, job_id=job.id, run_id=run.id)
 
         finish_job_run(
             session,
@@ -1063,6 +1121,7 @@ def _run_file_import(
         # Optional export after import (P4)
         if export:
             from lipsa.exporters import export_posts
+
             job_meta = {
                 "job_id": job.id,
                 "source_type": source_type,
@@ -1070,7 +1129,9 @@ def _run_file_import(
             }
             try:
                 result = export_posts(result.items, export, job_metadata=job_meta)
-                console.print(f"[green]Exported {result.record_count} records → {result.output_path}[/green]")
+                console.print(
+                    f"[green]Exported {result.record_count} records → {result.output_path}[/green]"
+                )
             except Exception as ex:
                 console.print(f"[yellow]Warning: Export failed: {ex}[/yellow]")
 
@@ -1103,7 +1164,11 @@ scheduler_app = typer.Typer(help="Control the background scheduler for recurring
 
 
 @scheduler_app.command("start")
-def scheduler_start(foreground: bool = typer.Option(True, "--foreground", help="Run scheduler in foreground (default)")) -> None:
+def scheduler_start(
+    foreground: bool = typer.Option(
+        True, "--foreground", help="Run scheduler in foreground (default)"
+    ),
+) -> None:
     """Start the APScheduler background scheduler and load all eligible recurring jobs."""
     from lipsa.scheduler import start_scheduler
 
@@ -1118,10 +1183,12 @@ def scheduler_start(foreground: bool = typer.Option(True, "--foreground", help="
         if foreground:
             # Keep the process alive
             import time
+
             while True:
                 time.sleep(1)
     except KeyboardInterrupt:
         from lipsa.scheduler import shutdown_scheduler
+
         shutdown_scheduler()
         console.print("\n[yellow]Scheduler stopped.[/yellow]")
 

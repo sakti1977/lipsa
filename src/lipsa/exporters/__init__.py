@@ -63,4 +63,3 @@ def export_posts(
         raise ValueError(f"Unsupported export format: {format}")
 
     return exporter.export(records, output_path, job_metadata=job_metadata)
-

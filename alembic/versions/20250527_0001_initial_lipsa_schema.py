@@ -20,8 +20,9 @@ Revises: None
 Create Date: 2026-05-27
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "20250527_0001"
@@ -82,7 +83,9 @@ def upgrade() -> None:
         sa.Column("reaction_breakdown", sa.JSON(), nullable=False, server_default="{}"),
         sa.Column("media", sa.JSON(), nullable=False, server_default="[]"),
         sa.Column("hashtags", sa.JSON(), nullable=False, server_default="[]"),
-        sa.Column("mentions", sa.JSON(), nullable=False, server_default="[]"),  # alignment fix from review
+        sa.Column(
+            "mentions", sa.JSON(), nullable=False, server_default="[]"
+        ),  # alignment fix from review
         sa.Column("is_repost", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("content_type", sa.String(), nullable=False, server_default="text"),
         sa.Column("raw_provider_data", sa.JSON(), nullable=False, server_default="{}"),
@@ -122,7 +125,9 @@ def upgrade() -> None:
     op.create_table(
         "media",
         sa.Column("id", sa.String(), primary_key=True),
-        sa.Column("post_id", sa.String(), sa.ForeignKey("posts.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "post_id", sa.String(), sa.ForeignKey("posts.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("url", sa.String(), nullable=False),
         sa.Column("type", sa.String(), nullable=False, server_default="image"),
         sa.Column("width", sa.Integer(), nullable=True),

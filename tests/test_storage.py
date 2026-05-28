@@ -17,11 +17,14 @@ from lipsa.storage.repositories import bulk_upsert_posts, create_search_job, ups
 def db_session(tmp_path, monkeypatch):
     """Provide an isolated in-memory or temp-file database session for each test."""
     # Force a temp database for tests
-    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # crude but effective for get_database_path on Windows
+    monkeypatch.setenv(
+        "USERPROFILE", str(tmp_path)
+    )  # crude but effective for get_database_path on Windows
     monkeypatch.setenv("HOME", str(tmp_path))
 
     # Recreate engine pointing at test DB
     from lipsa.storage import db as db_module
+
     db_module._engine = None
     db_module._SessionLocal = None
 
@@ -67,6 +70,7 @@ def test_urn_deduplication(db_session):
     from sqlalchemy import select
 
     from lipsa.storage.models import PostModel
+
     count = db_session.execute(select(PostModel)).scalars().all()
     assert len(count) == 1
 
@@ -100,7 +104,9 @@ def test_create_search_job_and_run(db_session):
     from lipsa.storage.repositories import create_job_run, finish_job_run
 
     run = create_job_run(db_session, job_id=job.id, provider_used="apify")
-    finish_job_run(db_session, run.id, status="success", posts_collected=87, estimated_cost_usd=0.42)
+    finish_job_run(
+        db_session, run.id, status="success", posts_collected=87, estimated_cost_usd=0.42
+    )
     db_session.commit()
 
     assert run.status == "success"

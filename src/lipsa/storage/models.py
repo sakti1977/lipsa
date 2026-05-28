@@ -30,6 +30,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 class DataSourceType(StrEnum):
     """Type of data source. Mirrors the Pydantic version for DB storage."""
+
     PUBLIC_SCRAPE = "public_scrape"
     SALES_NAVIGATOR_EXPORT = "sales_navigator_export"
     LINKEDIN_DATA_EXPORT = "linkedin_data_export"
@@ -40,6 +41,7 @@ class DataSourceType(StrEnum):
 
 class Base(DeclarativeBase):
     """Base class for all LIPSA SQLAlchemy models."""
+
     pass
 
 
@@ -69,7 +71,9 @@ class SearchJobModel(Base):
 
     # Hybrid + Legal strengthening (Options 2 + 3)
     data_source_type: Mapped[str] = mapped_column(String, default="public_scrape", nullable=False)
-    purpose: Mapped[str | None] = mapped_column(Text)  # Current user-declared purpose / lawful basis
+    purpose: Mapped[str | None] = mapped_column(
+        Text
+    )  # Current user-declared purpose / lawful basis
 
     # Relationships
     runs: Mapped[list[JobRunModel]] = relationship(
@@ -149,6 +153,7 @@ class AuthorModel(Base):
     Optional normalized author lookup table.
     Primary author data remains denormalized on posts (per design decision).
     """
+
     __tablename__ = "authors"
 
     profile_url: Mapped[str] = mapped_column(String, primary_key=True)
@@ -162,6 +167,7 @@ class AuditEventModel(Base):
     Immutable audit trail for legal/compliance defensibility.
     Mirrors and will eventually replace/augment the file-based ~/.lipsa/audit.log.
     """
+
     __tablename__ = "audit_events"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
@@ -174,13 +180,12 @@ class AuditEventModel(Base):
     user_ack: Mapped[str | None] = mapped_column(Text)
     details: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
 
-    __table_args__ = (
-        Index("idx_audit_events_job_timestamp", "job_id", "timestamp"),
-    )
+    __table_args__ = (Index("idx_audit_events_job_timestamp", "job_id", "timestamp"),)
 
 
 class MediaModel(Base):
     """Normalized media table (optional; many designs keep media JSON on posts)."""
+
     __tablename__ = "media"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)

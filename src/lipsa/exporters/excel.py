@@ -47,7 +47,9 @@ class ExcelExporter(BaseExporter):
         # Write metadata header if provided
         row = 1
         if job_metadata:
-            ws.cell(row=row, column=1, value="LIPSA Export Metadata").font = Font(bold=True, size=14)
+            ws.cell(row=row, column=1, value="LIPSA Export Metadata").font = Font(
+                bold=True, size=14
+            )
             row += 1
             for key, value in job_metadata.items():
                 ws.cell(row=row, column=1, value=key)
@@ -64,10 +66,21 @@ class ExcelExporter(BaseExporter):
 
         # Headers
         headers = [
-            "post_urn", "url", "text", "author_name", "author_headline",
-            "author_profile_url", "author_company", "posted_at",
-            "reactions_count", "comments_count", "reposts_count",
-            "content_type", "is_repost", "hashtags", "mentions"
+            "post_urn",
+            "url",
+            "text",
+            "author_name",
+            "author_headline",
+            "author_profile_url",
+            "author_company",
+            "posted_at",
+            "reactions_count",
+            "comments_count",
+            "reposts_count",
+            "content_type",
+            "is_repost",
+            "hashtags",
+            "mentions",
         ]
 
         header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")

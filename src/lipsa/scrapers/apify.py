@@ -52,7 +52,9 @@ class ApifyBackend(ScraperBackend):
 
         run_input = self._build_actor_input(query, filters)
 
-        logger.info(f"Starting Apify actor {self.actor_id} with input keys: {list(run_input.keys())}")
+        logger.info(
+            f"Starting Apify actor {self.actor_id} with input keys: {list(run_input.keys())}"
+        )
 
         try:
             run = client.actor(self.actor_id).call(run_input=run_input)

@@ -35,25 +35,18 @@ def get_scheduler() -> BackgroundScheduler:
     if _scheduler is not None:
         return _scheduler
 
-    jobstores = {
-        "default": SQLAlchemyJobStore(url=get_database_url())
-    }
+    jobstores = {"default": SQLAlchemyJobStore(url=get_database_url())}
 
-    executors = {
-        "default": ThreadPoolExecutor(20)
-    }
+    executors = {"default": ThreadPoolExecutor(20)}
 
     job_defaults = {
-        "coalesce": True,          # Combine missed runs
-        "max_instances": 1,        # Only one instance of each job at a time
-        "misfire_grace_time": 3600 # Allow 1 hour late starts
+        "coalesce": True,  # Combine missed runs
+        "max_instances": 1,  # Only one instance of each job at a time
+        "misfire_grace_time": 3600,  # Allow 1 hour late starts
     }
 
     _scheduler = BackgroundScheduler(
-        jobstores=jobstores,
-        executors=executors,
-        job_defaults=job_defaults,
-        timezone="UTC"
+        jobstores=jobstores, executors=executors, job_defaults=job_defaults, timezone="UTC"
     )
 
     return _scheduler
@@ -85,12 +78,7 @@ def schedule_job(job_id: str, cron_expression: str, func: callable, **kwargs) ->
     """Add or replace a scheduled job in APScheduler."""
     scheduler = get_scheduler()
     scheduler.add_job(
-        func,
-        trigger="cron",
-        id=job_id,
-        replace_existing=True,
-        args=[job_id],
-        **kwargs
+        func, trigger="cron", id=job_id, replace_existing=True, args=[job_id], **kwargs
     )
     logger.info(f"Scheduled job {job_id} with cron: {cron_expression}")
 
@@ -158,7 +146,9 @@ def load_scheduled_jobs(scheduler: BackgroundScheduler | None = None) -> None:
                     f"User must update the job and re-acknowledge consent."
                 )
 
-        logger.info(f"Loaded {loaded} scheduled jobs. Skipped {skipped} due to invalid/stale consent.")
+        logger.info(
+            f"Loaded {loaded} scheduled jobs. Skipped {skipped} due to invalid/stale consent."
+        )
 
     finally:
         session.close()
@@ -184,10 +174,7 @@ def _run_scheduled_job(job_id: str) -> None:
             return
 
         # Final consent check at execution time
-        if (
-            job.consent_disclaimer_version != DISCLAIMER_VERSION
-            or not job.consent_purpose
-        ):
+        if job.consent_disclaimer_version != DISCLAIMER_VERSION or not job.consent_purpose:
             logger.error(
                 f"Scheduled job {job_id} has stale consent. Skipping execution. "
                 f"User must update the job and re-acknowledge."

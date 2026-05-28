@@ -163,6 +163,7 @@ If you do not accept these terms, do not use LIPSA. Delete it from your system.
 ================================================================================
 """
 
+
 # =============================================================================
 # USER DATA DIRECTORY
 # All local state (future SQLite DB, audit logs, config, exports) lives here.
@@ -233,7 +234,9 @@ def require_acknowledgment(
                 event = json.loads(line)
                 if event.get("event_type") == "consent_ack":
                     # Check both root level (from log_consent_acknowledgment) and details (from audit_log_event)
-                    ver = event.get("disclaimer_version") or event.get("details", {}).get("disclaimer_version")
+                    ver = event.get("disclaimer_version") or event.get("details", {}).get(
+                        "disclaimer_version"
+                    )
                     if ver == current_version:
                         return True
             except json.JSONDecodeError:
@@ -248,6 +251,7 @@ def require_acknowledgment(
 
 def _prompt_for_ack(context: str) -> None:
     from rich.console import Console
+
     console = Console()
     console.print(
         "\n[bold red]Legal acknowledgment required for the current disclaimer.[/bold red]"
