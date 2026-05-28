@@ -1,8 +1,9 @@
 # LIPSA – LinkedIn Post Search & Collection Application
 
-> **Local-first tool for searching and collecting public LinkedIn posts by keyword or hashtag, with strong legal, ethical, and audit guardrails.**
+> **Local-first tool for searching and collecting LinkedIn posts via commercial providers or lower-risk imports, with strong legal, ethical, and audit guardrails.**
 
-**Status**: Alpha (PR #1 complete – project bootstrap + legal foundations only)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Status](https://img.shields.io/badge/status-alpha-orange)
 
 ---
 
@@ -10,147 +11,98 @@
 
 **Using this tool (or any automated means) to access LinkedIn almost certainly violates LinkedIn's User Agreement.**
 
-LinkedIn's User Agreement **Section 8.2 "Don’ts"** (effective November 2025) explicitly prohibits:
-
-> "software, devices, scripts, robots or any other means to scrape or copy the Services, or to use any data mining, robots, or similar data gathering and extraction methods"
+LinkedIn's User Agreement **Section 8.2 "Don’ts"** explicitly prohibits automated scraping and data extraction.
 
 **Consequences can include:**
-- Permanent account termination (personal and company pages)
-- IP and device fingerprint bans
-- Civil lawsuits (see hiQ Labs v. LinkedIn and 2025 enforcement actions)
-- Regulatory fines under GDPR/CCPA (example: €240,000 CNIL fine against KASPR in 2025)
+- Permanent account termination
+- Civil lawsuits and regulatory fines (GDPR/CCPA)
+- IP and device bans
 
-**Commercial scraping providers (Apify, Bright Data, etc.) provide no legal protection.** You remain the data controller. You are fully responsible.
+**Commercial providers (Apify, Bright Data, etc.) provide no legal protection.** You remain the data controller and are fully responsible.
 
-**This tool makes the risks explicit and auditable. It does not reduce them.**
+**Before using LIPSA for anything real, consult qualified legal counsel.**
 
-Before using LIPSA for anything real, **consult qualified legal counsel** in your jurisdiction.
+This tool makes risks explicit and auditable. It does **not** make the activity legal.
 
 ---
 
 ## What is LIPSA?
 
-LIPSA (LinkedIn Post Search Application) is being built as a responsible, local-first alternative to ad-hoc scripts and fragmented commercial tools. It prioritizes:
+LIPSA is a local-first Python CLI for responsibly collecting LinkedIn data. It supports two main paths:
 
-- **Local data ownership** (everything stays on your machine by default)
-- **Mandatory, versioned consent + immutable local audit trail**
-- **Commercial providers as the primary (safer) backend** (self-scraping is feature-flagged and heavily discouraged)
-- **Rich filtering, structured data, and flexible exports** (CSV, Excel, JSON, Parquet, Google Sheets)
-- **No engagement automation or contact enrichment features** (those belong in a completely different, higher-risk category)
+- **Higher-risk path**: Public post search via commercial scraping providers (Apify, etc.)
+- **Lower-risk path**: Importing data you already have legitimate access to (Sales Navigator exports, LinkedIn data downloads, etc.)
 
-See the full design document for architecture, data model, risks, and the 9-PR implementation plan:
+Key features:
+- Strong mandatory consent + immutable audit trail
+- Purpose / lawful basis tracking on every job
+- Flexible exporters (CSV, JSON, Excel, Parquet)
+- Job management and compliance package exports
+
+See the design document for the full architecture and legal analysis:
 `design/design-doc-08598f72.md`
 
 ---
 
-## Current Status (PR #1 – May 2026)
+## Current Status
 
-**This repository started completely empty.**
+The project has implemented core functionality through an evolved P4 phase, including:
+- Legal foundations and consent system
+- Data models and SQLite persistence
+- Scraper abstraction + Apify backend
+- Lower-risk importers (starting with Sales Navigator)
+- Rich one-off CLI with `--export`, `--dry-run`, and progress indicators
+- Multiple exporters (CSV, JSON, Excel, Parquet)
+- `jobs` commands with purpose and data source tracking
+- Compliance package export
 
-As of the design exploration on 2026-05-27, the workspace contained **zero files** except an empty `design/` subdirectory (verified via `list_dir` and PowerShell `Get-ChildItem -Recurse -Force`).
-
-PR #1 delivers:
-- Modern Python project layout (`src/lipsa/`)
-- Strong legal disclaimer module that **must** be called before any collection logic
-- Working CLI entrypoint (`lipsa`) with `legal show` / `legal ack` commands
-- `lipsa import sales-nav` for lower-risk Sales Navigator CSV imports
-- `lipsa jobs list / show / export` with purpose and data source tracking
-- Audit logging (JSON Lines + DB) to `~/.lipsa/audit.log` and `~/.lipsa/lipsa.db`
-- Prominent warnings on every invocation
-- No collection or scraping code (by design)
-
-**You can already run the legal gate today.**
+The tool is usable for research and testing but remains in active development.
 
 ---
 
-## Installation (Development)
+## Installation
 
 ```bash
-# Clone the repo
-git clone <your-repo-url>
-cd "LinkedIn Post Scraper"
+git clone https://github.com/sakti1977/lipsa.git
+cd lipsa
 
-# Create virtual environment (recommended)
 python -m venv .venv
-source .venv/bin/activate        # macOS/Linux
-# .venv\Scripts\activate         # Windows
+source .venv/bin/activate   # or .venv\Scripts\activate on Windows
 
-# Install in editable mode with dev dependencies
 pip install -e ".[dev]"
 
-# Verify the CLI works
 lipsa --help
-lipsa --version
 ```
-
-The first time you run any `lipsa` command you will see the high-risk banner.
 
 ---
 
-## Usage (PR #1 – Legal Gate Only)
+## Usage Examples
 
 ```bash
-# View the full current disclaimer
-lipsa legal show
-
-# Read the risks and record your explicit acknowledgment
+# Acknowledge legal risks (required)
 lipsa legal ack
 
-# Import from a lower-risk source (Sales Navigator export)
-lipsa import sales-nav my-export.csv --purpose "Recruiting research for my company - legitimate interest"
+# Lower-risk import from Sales Navigator
+lipsa import sales-nav ./export.csv --purpose "Recruiting research - legitimate interest"
 
-# Placeholder search command (enforces the legal gate)
-lipsa search "#generative-ai" --max-results 50
-# → Will tell you the feature is not implemented yet in PR #1
+# Public search with export and dry-run
+lipsa search "#ai" --max-results 50 --export results.csv --dry-run
+
+# Inspect jobs and export data
+lipsa jobs list
+lipsa jobs show <job-id>
+lipsa jobs export <job-id> --data-format excel
 ```
 
-All future collection commands (`search`, scheduled jobs, etc.) will route through the same legal layer.
-
 ---
 
-## User Data Directory
+## Design Principles
 
-LIPSA stores everything under `~/.lipsa/` (or `%USERPROFILE%\.lipsa\` on Windows):
-
-- `audit.log` – append-only JSON Lines audit trail (PR #1)
-- `lipsa.db` – SQLite database (PR #2+)
-- Future: config, exports, etc.
-
-Deleting this directory completely removes all LIPSA state (except any exports you deliberately saved elsewhere).
-
----
-
-## Design Principles (from the approved design)
-
-1. **Local-first** – You own the data and the liability.
-2. **Commercial providers first** – Apify + Bright Data (self-managed Playwright is disabled by default and heavily warned against).
-3. **Mandatory consent + audit** – No silent or background operation without explicit recorded acknowledgment.
-4. **No engagement features** – Search and collect only.
-5. **Transparency** – Every risk is surfaced in the UI, README, and code.
-
----
-
-## Roadmap (High Level)
-
-See the full **PR Plan** in `design/design-doc-08598f72.md` (bottom of the document).
-
-- PR #1 (this): Legal foundations + CLI skeleton ✅
-- PR #2: Data models + SQLite
-- PR #3: Apify backend
-- PR #4: Full one-off search CLI + exports (first usable version)
-- PR #5+: Scheduling, Bright Data, optional web UI, etc.
-
-After PR #4 you will have a working tool for ad-hoc research with proper safeguards.
-
----
-
-## Contributing
-
-This project is in early alpha. The highest priority right now is legal safety and correctness of the consent/audit model.
-
-If you are a lawyer, data protection expert, or have deep experience with platform ToS enforcement, your review of the disclaimer text and consent flows would be extremely valuable.
-
-Please open issues or discussions before submitting code that touches the legal layer.
+1. Local-first data ownership
+2. Hybrid support for different risk profiles
+3. Mandatory purpose + audit for every collection
+4. Transparency about legal risks
+5. No engagement or outreach features
 
 ---
 
@@ -158,14 +110,12 @@ Please open issues or discussions before submitting code that touches the legal 
 
 MIT License – see [LICENSE](LICENSE) file.
 
-**Additional notice**: The MIT license does **not** protect you from LinkedIn's claims or regulatory action. The extra warnings in this README and in the `lipsa legal` commands are the real legal interface of the project.
+**Important**: The license does **not** protect you from LinkedIn enforcement or regulatory action. The warnings in this README and the `lipsa legal` commands are the primary legal interface.
 
 ---
 
-## Acknowledgments
+## Contributing
 
-This design and implementation were created following a rigorous design-review-revise loop (design ID `08598f72`) that explicitly researched LinkedIn's current (2026) API capabilities, ToS, enforcement history, and commercial provider options.
+Legal safety and audit correctness are the top priorities. Please review the design document and `docs/LEGAL_RISK_REDUCTION.md` before contributing.
 
-The goal is to give researchers, analysts, and other legitimate users a better tool than ad-hoc scripts — while being brutally honest about the risks.
-
-**Use responsibly. Or better: don't use it for anything that could get you (or your organization) in serious trouble.**
+If you have legal or data protection expertise, your input on the consent and compliance flows would be especially valuable.
